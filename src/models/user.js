@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -40,6 +41,12 @@ const userSchema = new mongoose.Schema({
       }
     },
   },
+  tokens: [{
+    token: {
+      type: String,
+      required: true,
+    },
+  }],
 });
 
 // Convert raw password to hashed
@@ -52,6 +59,17 @@ userSchema.pre('save', async function (next) {
   }
   next();
 });
+
+// eslint-disable-next-line func-names
+userSchema.methods.generateAuthToken = async function () {
+  const user = this;
+  const token = jwt.sign({ _id: user.id.toString() }, 'sometext');
+
+  user.tokens = user.tokens.concat({ token });
+  await user.save();
+
+  return token;
+};
 
 // Check user before login
 userSchema.statics.findByCredentials = async (email, password) => {
